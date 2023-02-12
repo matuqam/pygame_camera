@@ -116,6 +116,12 @@ class Vector2d:
     def __repr__(self):
         return f'(X:{self.x}, Y:{self.y})'
     
+    def __add__(self, other):
+        return Vector2d(self.x + other.x, self.y + other.y)
+    
+    def __sub__(self, other):
+        return Vector2d(self.x - other.x, self.y - other.y)
+    
     def __mul__(self, other):
         return Vector2d(self.x*other, self.y*other)
     
