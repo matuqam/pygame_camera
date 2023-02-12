@@ -1,10 +1,4 @@
-import sys
-from random import randint, choice
-from typing import List, Dict, Tuple
-from enum import Enum
-
-import pygame
-from pygame.locals import *
+from imports import *
 
 
 # This will be set by the `main` module.
@@ -113,6 +107,10 @@ class Vector2d:
     def __init__(self, x:int, y:int):
         self.x = x
         self.y = y
+        
+    def magnitude(self):
+        return round((self.x**2 + self.y**2)**0.5)
+    
     def __repr__(self):
         return f'(X:{self.x}, Y:{self.y})'
     
@@ -125,24 +123,53 @@ class Vector2d:
     def __mul__(self, other):
         return Vector2d(self.x*other, self.y*other)
     
+    def __truediv__(self, other):
+        return Vector2d(self.x / other, self.y / other)
+    
+    def __floordiv__(self, other):
+        return Vector2d(self.x // other, self.y // other)
+    
+    def __round__(self, ndigits=0):
+        return Vector2d(int(round(self.x, ndigits=ndigits)), 
+                        int(round(self.y, ndigits=ndigits)))
+    
     __rmul__ = __mul__
 
 
 class Entity:
     '''Used for the "playable" objects as well as NPCs'''
-    def __init__(self, rect:Rect, parallax:int=1, color=(150,150,150)):
+    def __init__(self, rect:Rect, parallax:int=1, color=(150,150,150), speed=1):
         self.rect = rect
         self.parallax = parallax
         self.color = color
+        self.speed = speed
         self.movement = Vector2d(x=0,y=0)
+        self.destinations = []
+
+    def _has_destination(self):
+        return len(self.destinations) > 0
 
     def move(self, movement:Vector2d=None):
         '''
         movement: Vector2d
             allows to temporarly override the Entitys stored movement vector.
         '''
+        if self._has_destination():
+            print(f'position (x:{self.rect.x}, y:{self.rect.y}; target: {self.destinations[0]}')
+            delta = self.destinations[0] - Vector2d(self.rect.x, self.rect.y)
+            if delta.magnitude() <= self.speed * 10:
+                self.cycle_destination()
+            if delta.magnitude() > 0.0:
+                self.movement = round(delta / delta.magnitude())
+
         self.rect.x += movement.x if movement is not None else self.movement.x
         self.rect.y += movement.y if movement is not None else self.movement.y
+
+    def add_destination(self, destination: Vector2d):
+        self.destinations.append(destination)
+
+    def cycle_destination(self):
+        self.destinations = self.destinations[1:] + self.destinations[:1]
 
 
 class Camera:
@@ -189,12 +216,12 @@ class Camera:
         '''
         # use a generator for this?
         # use yield for this?
+        if duration is not None and self.shake_time == 0:
+            self.preshake = Vector2d(self.rect.x, self.rect.y)
         self.shake_unit = time_unit if time_unit is not None else self.shake_unit
         self.shake_time += duration * self.shake_unit if duration is not None else 0
         self.shake_amplitude = amplitude if amplitude is not None else self.shake_amplitude
         
-        if duration is not None:
-            self.preshake = Vector2d(self.rect.x, self.rect.y)
         if self.shake_time <= 0 and self.preshake.x is not None:
             self.rect.x, self.rect.y = self.preshake.x, self.preshake.y
             self.preshake = Vector2d(None, None)
